@@ -103,3 +103,24 @@ if df_campos is not None:
 
 else:
     st.error("Verifique se as planilhas CAMPOS.xlsx, SISTEMAS.xlsx e RELACIONAMENTOS.xlsx estão no repositório.")
+
+# --- RODAPÉ PERSONALIZADO ---
+st.markdown("---")
+email_suporte = "csenemix@gmail.com"
+assunto = "Feedback - SQL Maker RM"
+link_email = f"mailto:{email_suporte}?subject={assunto}"
+
+st.markdown(
+    f"""
+    <div style='text-align: center; color: gray; font-size: 0.9em;'>
+        <p>Desenvolvido por <strong>Claudio Ximenes Pereira</strong></p>
+        <p>Dúvidas ou sugestões? envie um email para {email_suporte}</p> 
+           <a href='{link_email}' style='color: #ff4b4b; text-decoration: none;'>
+              📧 Clique aqui para enviar um e-mail
+           </a>
+        </p>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
+
