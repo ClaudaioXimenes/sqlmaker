@@ -99,7 +99,7 @@ with tab_gerador:
                 campo_metrica = st.selectbox("Calcular sobre qual coluna?", [""] + todos_escolhidos, key=f"met_{seed}")
 
         # 5. Filtro WHERE
-        filtro_where = st.text_area("Filtros Adicionais [TABELA].[CAMPO] (Ex: PFUNC.CODCOLIGADA = 1, PFUNC.DATAADMISSAO >= '20250101' )", placeholder="Digite seus filtros...", key=f"w_{seed}")
+        filtro_where = st.text_area("Filtros Adicionais [TABELA].[CAMPO] separado por AND (Ex: PFUNC.CODCOLIGADA = 1 AND PFUNC.DATAADMISSAO >= '20250101' )", placeholder="Digite seus filtros...", key=f"w_{seed}")
 
         st.markdown("---")
 
@@ -155,6 +155,7 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
 
 
 
