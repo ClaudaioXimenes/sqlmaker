@@ -77,8 +77,8 @@ with tab_gerador:
 
         # 3. Joins
         filhas_relacao = df_relacoes[df_relacoes["MASTERTABLE"] == tabela_pai]["CHILDTABLE"].unique().tolist()
-        tabelas_globais = df_campos[df_campos["TABELA"].fillna("").str.startswith("G")]["TABELA"].unique().tolist()
-        filhas_finais = sorted(list(set(filhas_relacao + tabelas_globais)))
+        #tabelas_globais = df_campos[df_campos["TABELA"].fillna("").str.startswith("G")]["TABELA"].unique().tolist()
+        filhas_finais = sorted(list(set(filhas_relacao)))
         if tabela_pai in filhas_finais: filhas_finais.remove(tabela_pai)
 
         tabelas_filhas = st.multiselect("Deseja buscar dados em tabelas relacionadas? (Joins)", filhas_finais, key=f"fil_{seed}")
@@ -155,6 +155,7 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
 
 
 
