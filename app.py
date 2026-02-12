@@ -5,7 +5,7 @@ import pandas as pd
 st.set_page_config(page_title="SQL Maker RM - Totvs", layout="wide", page_icon="🚀")
 
 # --- FUNÇÃO DE CARREGAMENTO ---
-@st.cache_data(ttl=120)
+@st.cache_data
 def load_data():
     try:
         df_campos = pd.read_excel("CAMPOS.xlsx")
@@ -16,125 +16,135 @@ def load_data():
         st.error(f"Erro ao carregar planilhas: {e}")
         return None, None, None
 
-# --- INTERFACE PRINCIPAL ---
-st.title("🚀 SQL Maker - Gerador de Scripts RM")
+# --- CABEÇALHO ---
+st.title("🚀 SQL Maker - Assistente de Relatórios RM")
 st.markdown("---")
 
-# Botão de Reset
-if st.sidebar.button("➕ Iniciar Novo Script"):
-    if "reset_counter" not in st.session_state:
-        st.session_state.reset_counter = 0
-    st.session_state.reset_counter += 1
-    st.rerun()
+# Criando as Abas
+tab_tutorial, tab_gerador = st.tabs(["📖 Como Usar", "🛠️ Criar minha Sentença"])
 
-seed = st.session_state.get("reset_counter", 0)
 df_campos, df_sistemas, df_relacoes = load_data()
 
-if df_campos is not None:
-    df_sistemas.columns = df_sistemas.columns.str.strip().str.upper()
-    df_campos.columns = df_campos.columns.str.strip().str.upper()
-    df_relacoes.columns = df_relacoes.columns.str.strip().str.upper()
-
-    # 1. Seleção do Sistema e Tabela Pai
-    df_sistemas["LABEL"] = df_sistemas["CODSISTEMA"].astype(str) + " - " + df_sistemas["DESCRICAO"]
-    sistema_sel = st.sidebar.selectbox("Selecione o Sistema", df_sistemas["LABEL"], key=f"sis_{seed}")
-    cod_sistema = df_sistemas[df_sistemas["LABEL"] == sistema_sel]["CODSISTEMA"].values[0]
-
-    tab_disponiveis = df_campos[df_campos["TABELA"].fillna("").str.startswith(str(cod_sistema))]["TABELA"].unique()
-    tabela_pai = st.selectbox("Selecione a Tabela Pai", sorted(tab_disponiveis), key=f"pai_{seed}")
-
-    col_nome_campo = df_campos.columns[1]
-    todos_campos_pai = df_campos[df_campos["TABELA"] == tabela_pai][col_nome_campo].dropna().tolist()
+# --- ABA 1: TUTORIAL ---
+with tab_tutorial:
+    st.header("Seja bem-vindo!")
+    st.markdown("""
+    Esta ferramenta permite que você extraia informações do RM de forma visual.
     
-    campos_pai_sel = st.multiselect(f"Colunas de {tabela_pai}", options=todos_campos_pai, key=f"cols_pai_{seed}")
+    ### 📝 O Passo a Passo:
+    1. **Módulo:** Escolha o sistema (Ex: P - RH).
+    2. **Tabela:** Escolha o assunto (Ex: Funcionários).
+    3. **Colunas:** Marque o que você quer ver no relatório.
+    4. **Cálculos:** Use se precisar somar valores ou contar registros.
+    """)
+    st.success("Tudo pronto? Agora clique na aba **'Criar minha Sentença'** lá no topo!")
 
-    # 2. Joins e Campos das Filhas
-    filhas_sug = df_relacoes[df_relacoes["MASTERTABLE"] == tabela_pai]["CHILDTABLE"].unique()
-    tabelas_filhas = st.multiselect("Adicionar Joins (Tabelas Filhas)", filhas_sug, key=f"fil_{seed}")
+# --- ABA 2: GERADOR ---
+with tab_gerador:
+    if df_campos is not None:
+        if st.sidebar.button("➕ Limpar e Iniciar Novo"):
+            if "reset_counter" not in st.session_state:
+                st.session_state.reset_counter = 0
+            st.session_state.reset_counter += 1
+            st.rerun()
 
-    campos_por_filha = {}
-    if tabelas_filhas:
+        seed = st.session_state.get("reset_counter", 0)
+
+        # Normalização de nomes de colunas
+        df_sistemas.columns = df_sistemas.columns.str.strip().str.upper()
+        df_campos.columns = df_campos.columns.str.strip().str.upper()
+        df_relacoes.columns = df_relacoes.columns.str.strip().str.upper()
+
+        # 1. Seleção do Sistema
+        df_sistemas["LABEL"] = df_sistemas["CODSISTEMA"].astype(str) + " - " + df_sistemas["DESCRICAO"]
+        sistema_sel = st.selectbox("1. Qual o Módulo do RM?", df_sistemas["LABEL"], key=f"sis_{seed}")
+        cod_sistema = str(df_sistemas[df_sistemas["LABEL"] == sistema_sel]["CODSISTEMA"].values[0])
+
+        # 2. Tabela Pai
+        tab_disponiveis = df_campos[df_campos["TABELA"].fillna("").str.startswith(cod_sistema)]["TABELA"].unique()
+        tabela_pai = st.selectbox("2. Escolha a Tabela Principal", sorted(tab_disponiveis), key=f"pai_{seed}")
+
+        col_nome_campo = df_campos.columns[1]
+        todos_campos_pai = df_campos[df_campos["TABELA"] == tabela_pai][col_nome_campo].dropna().tolist()
+        campos_pai_sel = st.multiselect(f"Quais informações de {tabela_pai} você quer?", options=todos_campos_pai, key=f"cols_pai_{seed}")
+
+        # 3. Joins
+        filhas_relacao = df_relacoes[df_relacoes["MASTERTABLE"] == tabela_pai]["CHILDTABLE"].unique().tolist()
+        tabelas_globais = df_campos[df_campos["TABELA"].fillna("").str.startswith("G")]["TABELA"].unique().tolist()
+        filhas_finais = sorted(list(set(filhas_relacao + tabelas_globais)))
+        if tabela_pai in filhas_finais: filhas_finais.remove(tabela_pai)
+
+        tabelas_filhas = st.multiselect("Deseja buscar dados em tabelas relacionadas? (Joins)", filhas_finais, key=f"fil_{seed}")
+
+        campos_por_filha = {}
         for filha in tabelas_filhas:
             campos_da_filha = df_campos[df_campos["TABELA"] == filha][col_nome_campo].dropna().tolist()
             campos_por_filha[filha] = st.multiselect(f"Colunas de: {filha}", options=campos_da_filha, key=f"cols_{filha}_{seed}")
 
-    # --- NOVO: SEÇÃO DE AGRUPAMENTO (CAMINHO A) ---
-    st.markdown("### 📊 Agrupamentos e Métricas (Opcional)")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        op_agregacao = st.selectbox("Operação", ["NENHUMA", "SOMA (SUM)", "CONTAGEM (COUNT)", "MÉDIA (AVG)", "MÁXIMO (MAX)", "MÍNIMO (MIN)"], key=f"op_{seed}")
-    
-    campo_metrica = None
-    if op_agregacao != "NENHUMA":
+        # 4. Agrupamento
+        st.markdown("### 📊 Adicionar Cálculos (Opcional)")
+        col1, col2 = st.columns(2)
+        with col1:
+            op_agregacao = st.selectbox("Deseja fazer algum cálculo?", ["NENHUM", "SOMA (SUM)", "CONTAGEM (COUNT)", "MÉDIA (AVG)", "MÁXIMO (MAX)", "MÍNIMO (MIN)"], key=f"op_{seed}")
         with col2:
-            # Junta todos os campos selecionados acima para escolher qual será calculado
-            todos_escolhidos = campos_pai_sel + [c for sub in campos_por_filha.values() for c in sub]
-            campo_metrica = st.selectbox("Calcular sobre qual campo?", [""] + todos_escolhidos, key=f"met_{seed}")
-        with col3:
-            st.info("💡 Campos não calculados serão agrupados automaticamente (GROUP BY).")
+            if op_agregacao != "NENHUM":
+                todos_escolhidos = campos_pai_sel + [item for sublist in campos_por_filha.values() for item in sublist]
+                campo_metrica = st.selectbox("Calcular sobre qual coluna?", [""] + todos_escolhidos, key=f"met_{seed}")
 
-    # 3. Filtro WHERE
-    filtro_where = st.text_area("Filtro WHERE (Opcional)", placeholder="Ex: CODCOLIGADA = 1", key=f"w_{seed}")
+        # 5. Filtro WHERE
+        filtro_where = st.text_area("Filtros Adicionais (Ex: CODCOLIGADA = 1)", placeholder="Digite seus filtros...", key=f"w_{seed}")
 
-    # --- GERAÇÃO DO SCRIPT ---
-    if st.button("✨ Gerar Script SQL", use_container_width=True):
-        if not campos_pai_sel and not any(campos_por_filha.values()):
-            st.warning("Selecione ao menos uma coluna!")
-        else:
-            # Mapeamento de colunas com seus aliases (Tabela.Coluna)
-            colunas_select = [f"{tabela_pai}.{c}" for c in campos_pai_sel]
-            for filha, cols in campos_por_filha.items():
-                for c in cols:
-                    colunas_select.append(f"{filha}.{c}")
+        st.markdown("---")
 
-            # Lógica de Agrupamento
-            if op_agregacao != "NENHUMA" and campo_metrica:
-                map_op = {"SOMA (SUM)": "SUM", "CONTAGEM (COUNT)": "COUNT", "MÉDIA (AVG)": "AVG", "MÁXIMO (MAX)": "MAX", "MÍNIMO (MIN)": "MIN"}
-                func = map_op[op_agregacao]
-                
-                # Identifica qual a tabela do campo de métrica (Pai ou Filha?)
-                prefixo_metrica = ""
-                if campo_metrica in campos_pai_sel:
-                    prefixo_metrica = tabela_pai
-                else:
-                    for f, cs in campos_por_filha.items():
-                        if campo_metrica in cs:
-                            prefixo_metrica = f
-                            break
-                
-                campo_final_metrica = f"{func}({prefixo_metrica}.{campo_metrica}) AS {func}_{campo_metrica}"
-                
-                # Campos do SELECT (Todos exceto o que vai ser calculado)
-                campos_group_by = [c for c in colunas_select if not c.endswith(f".{campo_metrica}")]
-                select_final = ",\n  ".join(campos_group_by + [campo_final_metrica])
-                group_by_sql = f"\nGROUP BY\n  " + ",\n  ".join(campos_group_by)
+        # --- AQUI ESTÁ A LÓGICA QUE FALTAVA ---
+        if st.button("✨ GERAR MINHA SENTENÇA SQL", use_container_width=True):
+            if not campos_pai_sel and not any(campos_por_filha.values()):
+                st.warning("Selecione ao menos uma coluna!")
             else:
-                select_final = ",\n  ".join(colunas_select)
-                group_by_sql = ""
+                colunas_select = [f"{tabela_pai}.{c}" for c in campos_pai_sel]
+                for filha, cols in campos_por_filha.items():
+                    for c in cols:
+                        colunas_select.append(f"{filha}.{c}")
 
-            # Montagem Final
-            script = f"SELECT\n  {select_final}\nFROM {tabela_pai} (NOLOCK)"
-            
-            for filha in tabelas_filhas:
-                rel = df_relacoes[(df_relacoes["MASTERTABLE"] == tabela_pai) & (df_relacoes["CHILDTABLE"] == filha)]
-                conds = []
-                for _, r in rel.iterrows():
-                    cp_l, cf_l = str(r["MASTERFIELD"]).split(","), str(r["CHILDFIELD"]).split(",")
-                    for cp, cf in zip(cp_l, cf_l):
-                        conds.append(f"{tabela_pai}.{cp.strip()} = {filha}.{cf.strip()}")
-                if conds:
-                    script += f"\nINNER JOIN {filha} (NOLOCK) ON\n  " + " AND\n  ".join(conds)
+                if op_agregacao != "NENHUM" and 'campo_metrica' in locals() and campo_metrica:
+                    map_op = {"SOMA (SUM)": "SUM", "CONTAGEM (COUNT)": "COUNT", "MÉDIA (AVG)": "AVG", "MÁXIMO (MAX)": "MAX", "MÍNIMO (MIN)": "MIN"}
+                    func = map_op[op_agregacao]
+                    prefixo_met = tabela_pai if campo_metrica in campos_pai_sel else ""
+                    if not prefixo_met:
+                        for f, cs in campos_por_filha.items():
+                            if campo_metrica in cs:
+                                prefixo_met = f
+                                break
+                    campo_final_met = f"{func}({prefixo_met}.{campo_metrica}) AS {func}_{campo_metrica}"
+                    campos_gb = [c for c in colunas_select if not c.endswith(f".{campo_metrica}")]
+                    select_final = ",\n  ".join(campos_gb + [campo_final_met])
+                    group_by_sql = f"\nGROUP BY\n  " + ",\n  ".join(campos_gb)
+                else:
+                    select_final = ",\n  ".join(colunas_select)
+                    group_by_sql = ""
 
-            if filtro_where.strip():
-                script += f"\nWHERE {filtro_where.strip()}"
-            
-            script += group_by_sql
+                script = f"SELECT\n  {select_final}\nFROM {tabela_pai} (NOLOCK)"
+                
+                for filha in tabelas_filhas:
+                    rel = df_relacoes[(df_relacoes["MASTERTABLE"] == tabela_pai) & (df_relacoes["CHILDTABLE"] == filha)]
+                    if not rel.empty:
+                        conds = []
+                        for _, r in rel.iterrows():
+                            cp_l, cf_l = str(r["MASTERFIELD"]).split(","), str(r["CHILDFIELD"]).split(",")
+                            for cp, cf in zip(cp_l, cf_l):
+                                conds.append(f"{tabela_pai}.{cp.strip()} = {filha}.{cf.strip()}")
+                        script += f"\nINNER JOIN {filha} (NOLOCK) ON\n  " + " AND\n  ".join(conds)
+                    else:
+                        script += f"\nINNER JOIN {filha} (NOLOCK) ON\n  -- AJUSTE O JOIN: {tabela_pai}.ID = {filha}.ID"
 
-            st.code(script, language="sql")
-            st.download_button("📥 Baixar .sql", script, file_name=f"query_agrupada_{tabela_pai}.sql")
+                if filtro_where.strip():
+                    script += f"\nWHERE {filtro_where.strip()}"
+                script += group_by_sql
+
+                st.success("Tudo pronto! Veja sua sentença abaixo:")
+                st.code(script, language="sql")
+                st.download_button("📥 Baixar .sql", script, file_name=f"sentenca_{tabela_pai}.sql")
 
 # --- RODAPÉ ---
 st.markdown("---")
-st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b;'>Suporte</a></div>", unsafe_allow_html=True)
-
+st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
