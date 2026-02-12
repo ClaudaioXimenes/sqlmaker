@@ -49,7 +49,7 @@ with tab_tutorial:
 # --- ABA 2: GERADOR ---
 with tab_gerador:
     if df_campos is not None:
-        if st.sidebar.button("➕ Limpar e Iniciar Novo"):
+        if st.sidebar.button("➕ Novo Script"):
             if "reset_counter" not in st.session_state:
                 st.session_state.reset_counter = 0
             st.session_state.reset_counter += 1
@@ -155,5 +155,6 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
 
 
