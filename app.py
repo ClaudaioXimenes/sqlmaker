@@ -116,11 +116,12 @@ st.markdown(
         <p>Desenvolvido por <strong>Claudio Ximenes Pereira</strong></p>
         <p>Dúvidas ou sugestões? envie um email para {email_suporte}</p> 
            <a href='{link_email}' style='color: #ff4b4b; text-decoration: none;'>
-              📧 Clique aqui para enviar um e-mail
+              Clique aqui para enviar um e-mail
            </a>
         </p>
     </div>
     """, 
     unsafe_allow_html=True
 )
+
 
