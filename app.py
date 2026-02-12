@@ -5,7 +5,7 @@ import pandas as pd
 st.set_page_config(page_title="SQL Maker RM - Totvs", layout="wide", page_icon="🚀")
 
 # --- FUNÇÃO DE CARREGAMENTO ---
-@st.cache_data
+@st.cache_data(ttl=120)
 def load_data():
     try:
         df_campos = pd.read_excel("CAMPOS.xlsx")
@@ -137,3 +137,4 @@ if df_campos is not None:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b;'>Suporte</a></div>", unsafe_allow_html=True)
+
