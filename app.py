@@ -35,7 +35,10 @@ with tab_tutorial:
     1. **Módulo:** Escolha o sistema (Ex: P - RH).
     2. **Tabela:** Escolha o assunto (Ex: Funcionários).
     3. **Colunas:** Marque o que você quer ver no relatório.
-    4. **Cálculos:** Use se precisar somar valores ou contar registros.
+    4. **Tabelas Relacionadas [Joins]:** Use se precisar buscar informações de outras tabelas.
+    5. **Cálculos:** Use se precisar somar valores ou contar registros.
+    6. **Filtros:** Use se precisar filtrar o que é mostrado.
+    7. **Revise:** Uma vez gerado o script, revise-o e baixe-o, retire ou adicione informações. Lembre-se esse App é uma ferramenta de ajuda!
     """)
     st.success("Tudo pronto? Agora clique na aba **'Criar minha Sentença'** lá no topo!")
     st.markdown("---")
@@ -152,4 +155,5 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
 
