@@ -38,6 +38,10 @@ with tab_tutorial:
     4. **Cálculos:** Use se precisar somar valores ou contar registros.
     """)
     st.success("Tudo pronto? Agora clique na aba **'Criar minha Sentença'** lá no topo!")
+    st.markdown("---")
+    st.markdown("### 🤝 Comunidade e Suporte")
+    st.write("Tem alguma dúvida, encontrou um erro ou quer sugerir uma nova tabela?")
+    st.link_button("🤖 Falar com o Assistente no Telegram", "https://t.me/sqlmaker_bot", use_container_width=True)
 
 # --- ABA 2: GERADOR ---
 with tab_gerador:
@@ -148,3 +152,4 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
