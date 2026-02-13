@@ -37,7 +37,6 @@ def adicionar_sidebar_linkedin():
 
 # --- FUNÇÃO DE CARREGAMENTO COM CACHE ---
 
-# --- FUNÇÃO DE CARREGAMENTO ---
 @st.cache_data
 def load_data():
     try:
@@ -190,5 +189,6 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
 
 
