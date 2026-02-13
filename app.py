@@ -125,7 +125,7 @@ with tab_gerador:
             todos_escolhidos = campos_pai_sel + [item for sublist in campos_por_filha.values() for item in sublist]
             campo_metrica = st.selectbox("Sobre qual coluna?", [""] + todos_escolhidos, key=f"met_{seed}")
 
-        filtro_where = st.text_area("Filtros [Tabela].[Campo] (Ex: CODCOLIGADA = 1 AND NOME Like '%SILVA%')", key=f"w_{seed}")
+        filtro_where = st.text_area("Filtros [Tabela].[Campo] (Ex: PFUNC.CODCOLIGADA = 1 AND PFUNC.NOME Like '%SILVA%')", key=f"w_{seed}")
 
         # Lógica de Geração SQL
         if st.button("✨ GERAR MINHA SENTENÇA SQL", use_container_width=True):
@@ -171,4 +171,5 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por <a href='{LINKEDIN_URL}' style='color: #0077b5; text-decoration: none; font-weight: bold;'>Claudio Ximenes</a> | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
 
