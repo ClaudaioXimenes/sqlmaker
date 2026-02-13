@@ -5,6 +5,39 @@ import pandas as pd
 st.set_page_config(page_title="SQL Maker RM - Totvs", layout="wide", page_icon="🚀")
 
 # --- FUNÇÃO DE CARREGAMENTO ---
+# --- DEFINIÇÃO GLOBAL DA URL ---
+LINKEDIN_URL = "https://www.linkedin.com/in/claudio-ximenes-pereira-bb090036/"
+
+# --- FUNÇÃO DA SIDEBAR ESTABILIZADA (Sem tremedeira) ---
+def adicionar_sidebar_linkedin():
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🤝 Conecte-se Comigo")
+    st.sidebar.write("Gostou da ferramenta? Vamos ampliar nossa rede no LinkedIn!")
+    
+    # Botão estático e limpo para evitar conflito de renderização
+    st.sidebar.markdown(
+        f"""
+        <a href="{LINKEDIN_URL}" target="_blank" style="text-decoration: none;">
+            <div style="
+                background-color: #0077b5;
+                color: white;
+                padding: 12px;
+                border-radius: 8px;
+                text-align: center;
+                font-weight: bold;
+                border: none;
+                margin-bottom: 10px;">
+                🔗 Ver Perfil no LinkedIn
+            </div>
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
+    st.sidebar.markdown("---")
+
+# --- FUNÇÃO DE CARREGAMENTO COM CACHE ---
+
+# --- FUNÇÃO DE CARREGAMENTO ---
 @st.cache_data
 def load_data():
     try:
@@ -22,6 +55,8 @@ st.markdown("---")
 
 # Criando as Abas
 tab_tutorial, tab_gerador = st.tabs(["📖 Como Usar", "🛠️ Criar minha Sentença"])
+
+adicionar_sidebar_linkedin()
 
 df_campos, df_sistemas, df_relacoes = load_data()
 
@@ -155,8 +190,5 @@ with tab_gerador:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximnenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
-
-
-
 
 
