@@ -299,17 +299,40 @@ with tab_gerador:
         todos_campos_pai = df_campos[df_campos["TABELA"] == tabela_pai][col_nome_campo].dropna().tolist()
         campos_pai_sel = st.multiselect(f"Quais informações de {tabela_pai} você quer?", options=todos_campos_pai, key=f"cols_pai_{seed}")
 
-        # 3. Joins
+        # 3. Joins com seleção de tipo
         filhas_relacao = df_relacoes[df_relacoes["MASTERTABLE"] == tabela_pai]["CHILDTABLE"].unique().tolist()
         filhas_finais = sorted(list(set(filhas_relacao)))
         if tabela_pai in filhas_finais: filhas_finais.remove(tabela_pai)
 
         tabelas_filhas = st.multiselect("Deseja buscar dados em tabelas relacionadas? (Joins)", filhas_finais, key=f"fil_{seed}")
 
+        # Dicionário para armazenar o tipo de JOIN escolhido para cada tabela
+        tipos_join = {}
         campos_por_filha = {}
+
         for filha in tabelas_filhas:
-            campos_da_filha = df_campos[df_campos["TABELA"] == filha][col_nome_campo].dropna().tolist()
-            campos_por_filha[filha] = st.multiselect(f"Colunas de: {filha}", options=campos_da_filha, key=f"cols_{filha}_{seed}")
+            st.markdown(f"**📎 {filha}**")
+            col_join, col_campos = st.columns([1, 3])
+            
+            with col_join:
+                st.markdown("**Tipo de JOIN:**")
+                tipo_join = st.selectbox(
+                    "Tipo de JOIN",
+                    options=["INNER", "LEFT", "RIGHT", "FULL"],
+                    key=f"join_{filha}_{seed}",
+                    label_visibility="collapsed"
+                )
+                tipos_join[filha] = tipo_join
+            
+            with col_campos:
+                st.markdown("**Colunas:**")
+                campos_da_filha = df_campos[df_campos["TABELA"] == filha][col_nome_campo].dropna().tolist()
+                campos_por_filha[filha] = st.multiselect(
+                    f"Colunas de: {filha}",
+                    options=campos_da_filha,
+                    key=f"cols_{filha}_{seed}",
+                    label_visibility="collapsed"
+                )
 
         # 4. Agrupamento
         st.markdown("### 📊 Adicionar Cálculos (Opcional)")
@@ -321,9 +344,196 @@ with tab_gerador:
                 todos_escolhidos = campos_pai_sel + [item for sublist in campos_por_filha.values() for item in sublist]
                 campo_metrica = st.selectbox("Calcular sobre qual coluna?", [""] + todos_escolhidos, key=f"met_{seed}")
 
-        # 5. Filtro WHERE
-        filtro_where = st.text_area("Filtros Adicionais [Tabela].[Campo] (Ex: PFUNC.CODCOLIGADA = 1 AND PFUNC.NOME LIKE '%XIMENES%')", placeholder="Digite seus filtros...", key=f"w_{seed}")
-
+        # 5. Filtro WHERE - Interface Visual
+        st.markdown("### 🔍 Filtros (WHERE)")
+        
+        # Inicializa a lista de filtros no session_state se não existir
+        if f"filtros_{seed}" not in st.session_state:
+            st.session_state[f"filtros_{seed}"] = []
+        
+        # Contador para resetar os campos do formulário de filtro
+        if f"filtro_counter_{seed}" not in st.session_state:
+            st.session_state[f"filtro_counter_{seed}"] = 0
+        
+        # Coletar todos os campos disponíveis (da tabela pai e filhas)
+        campos_disponiveis_filtro = {}
+        # Campos da tabela pai
+        for campo in todos_campos_pai:
+            campos_disponiveis_filtro[f"{tabela_pai}.{campo}"] = tabela_pai
+        # Campos das tabelas filhas
+        for filha in tabelas_filhas:
+            campos_da_filha = df_campos[df_campos["TABELA"] == filha][col_nome_campo].dropna().tolist()
+            for campo in campos_da_filha:
+                campos_disponiveis_filtro[f"{filha}.{campo}"] = filha
+        
+        lista_campos_filtro = sorted(list(campos_disponiveis_filtro.keys()))
+        
+        # Interface para adicionar novo filtro
+        with st.expander("➕ Adicionar Novo Filtro", expanded=len(st.session_state[f"filtros_{seed}"]) == 0):
+            col_campo, col_op, col_valor = st.columns([2, 1, 2])
+            
+            # Usa o contador para forçar reset dos campos
+            filtro_key = f"{seed}_{st.session_state[f'filtro_counter_{seed}']}"
+            
+            with col_campo:
+                campo_filtro = st.selectbox(
+                    "Campo",
+                    options=[""] + lista_campos_filtro,
+                    key=f"novo_campo_filtro_{filtro_key}"
+                )
+            
+            with col_op:
+                operador_filtro = st.selectbox(
+                    "Operador",
+                    options=["=", "!=", ">", "<", ">=", "<=", "LIKE", "NOT LIKE", "IN", "NOT IN", "BETWEEN", "IS NULL", "IS NOT NULL"],
+                    key=f"novo_op_filtro_{filtro_key}"
+                )
+            
+            with col_valor:
+                # Mostra campo de valor apenas se o operador precisar
+                if operador_filtro not in ["IS NULL", "IS NOT NULL"]:
+                    if operador_filtro == "BETWEEN":
+                        # Para BETWEEN, mostra dois campos
+                        col_val1, col_val2 = st.columns(2)
+                        with col_val1:
+                            valor1_filtro = st.text_input(
+                                "Valor Inicial",
+                                placeholder="Ex: 1 ou '2024-01-01'",
+                                key=f"novo_valor1_filtro_{filtro_key}"
+                            )
+                        with col_val2:
+                            valor2_filtro = st.text_input(
+                                "Valor Final",
+                                placeholder="Ex: 100 ou '2024-12-31'",
+                                key=f"novo_valor2_filtro_{filtro_key}"
+                            )
+                        # Combina os dois valores
+                        valor_filtro = f"{valor1_filtro}|{valor2_filtro}"  # Usando | como separador
+                    elif operador_filtro in ["IN", "NOT IN"]:
+                        valor_filtro = st.text_input(
+                            "Valores (separados por vírgula)",
+                            placeholder="Ex: 1, 2, 3 ou 'A', 'B', 'C'",
+                            key=f"novo_valor_filtro_{filtro_key}"
+                        )
+                    elif operador_filtro in ["LIKE", "NOT LIKE"]:
+                        valor_filtro = st.text_input(
+                            "Valor",
+                            placeholder="Ex: %XIMENES% ou MARIA%",
+                            key=f"novo_valor_filtro_{filtro_key}"
+                        )
+                    else:
+                        valor_filtro = st.text_input(
+                            "Valor",
+                            placeholder="Ex: 1 ou 'TEXTO'",
+                            key=f"novo_valor_filtro_{filtro_key}"
+                        )
+                else:
+                    valor_filtro = ""
+                    st.info("Operador não requer valor")
+            
+            col_add, col_conector = st.columns([1, 1])
+            with col_add:
+                if st.button("➕ Adicionar Filtro", key=f"add_filtro_{seed}", use_container_width=True):
+                    if campo_filtro:
+                        # Validação especial para BETWEEN
+                        if operador_filtro == "BETWEEN":
+                            if "|" in valor_filtro and valor_filtro.split("|")[0].strip() and valor_filtro.split("|")[1].strip():
+                                novo_filtro = {
+                                    "campo": campo_filtro,
+                                    "operador": operador_filtro,
+                                    "valor": valor_filtro.strip(),
+                                    "conector": "AND"  # Default
+                                }
+                                st.session_state[f"filtros_{seed}"].append(novo_filtro)
+                                # Incrementa o contador para limpar os campos
+                                st.session_state[f"filtro_counter_{seed}"] += 1
+                                st.rerun()
+                            else:
+                                st.warning("Por favor, preencha os dois valores (inicial e final) para BETWEEN!")
+                        elif operador_filtro in ["IS NULL", "IS NOT NULL"] or valor_filtro.strip():
+                            novo_filtro = {
+                                "campo": campo_filtro,
+                                "operador": operador_filtro,
+                                "valor": valor_filtro.strip(),
+                                "conector": "AND"  # Default
+                            }
+                            st.session_state[f"filtros_{seed}"].append(novo_filtro)
+                            # Incrementa o contador para limpar os campos
+                            st.session_state[f"filtro_counter_{seed}"] += 1
+                            st.rerun()
+                        else:
+                            st.warning("Por favor, preencha o valor do filtro!")
+                    else:
+                        st.warning("Por favor, selecione um campo!")
+            
+            with col_conector:
+                if len(st.session_state[f"filtros_{seed}"]) > 0:
+                    st.info(f"✓ {len(st.session_state[f"filtros_{seed}"])} filtro(s) adicionado(s)")
+        
+        # Exibir filtros adicionados
+        if st.session_state[f"filtros_{seed}"]:
+            st.markdown("**Filtros Ativos:**")
+            
+            for idx, filtro in enumerate(st.session_state[f"filtros_{seed}"]):
+                col_info, col_conector, col_del = st.columns([4, 1, 1])
+                
+                with col_info:
+                    # Monta a descrição do filtro
+                    if filtro["operador"] in ["IS NULL", "IS NOT NULL"]:
+                        desc_filtro = f"`{filtro['campo']}` **{filtro['operador']}**"
+                    elif filtro["operador"] == "BETWEEN":
+                        # Para BETWEEN, separa os dois valores
+                        valores = filtro['valor'].split("|")
+                        if len(valores) == 2:
+                            val1, val2 = valores[0].strip(), valores[1].strip()
+                            # Detecta se é numérico ou texto
+                            if not val1.replace('.', '').replace('-', '').isdigit():
+                                val1 = f"'{val1}'"
+                            if not val2.replace('.', '').replace('-', '').isdigit():
+                                val2 = f"'{val2}'"
+                            desc_filtro = f"`{filtro['campo']}` **BETWEEN** `{val1}` **AND** `{val2}`"
+                        else:
+                            desc_filtro = f"`{filtro['campo']}` **BETWEEN** `{filtro['valor']}`"
+                    elif filtro["operador"] in ["IN", "NOT IN"]:
+                        desc_filtro = f"`{filtro['campo']}` **{filtro['operador']}** `({filtro['valor']})`"
+                    elif filtro["operador"] in ["LIKE", "NOT LIKE"]:
+                        desc_filtro = f"`{filtro['campo']}` **{filtro['operador']}** `'{filtro['valor']}'`"
+                    else:
+                        # Detecta se o valor é numérico ou texto
+                        valor_display = filtro['valor']
+                        if not valor_display.replace('.', '').replace('-', '').isdigit():
+                            valor_display = f"'{valor_display}'"
+                        desc_filtro = f"`{filtro['campo']}` **{filtro['operador']}** `{valor_display}`"
+                    
+                    if idx > 0:
+                        st.markdown(f"**{filtro['conector']}** {desc_filtro}")
+                    else:
+                        st.markdown(desc_filtro)
+                
+                with col_conector:
+                    if idx < len(st.session_state[f"filtros_{seed}"]) - 1:
+                        # Permite trocar o conector (AND/OR)
+                        novo_conector = st.selectbox(
+                            "Conector",
+                            options=["AND", "OR"],
+                            index=0 if st.session_state[f"filtros_{seed}"][idx + 1]["conector"] == "AND" else 1,
+                            key=f"conector_{idx}_{seed}",
+                            label_visibility="collapsed"
+                        )
+                        if novo_conector != st.session_state[f"filtros_{seed}"][idx + 1]["conector"]:
+                            st.session_state[f"filtros_{seed}"][idx + 1]["conector"] = novo_conector
+                            st.rerun()
+                
+                with col_del:
+                    if st.button("🗑️", key=f"del_filtro_{idx}_{seed}", help="Remover filtro"):
+                        st.session_state[f"filtros_{seed}"].pop(idx)
+                        st.rerun()
+            
+            # Botão para limpar todos os filtros
+            if st.button("🗑️ Limpar Todos os Filtros", key=f"limpar_filtros_{seed}"):
+                st.session_state[f"filtros_{seed}"] = []
+                st.rerun()
+        
         st.markdown("---")
 
         # --- GERAÇÃO DA SQL ---
@@ -357,18 +567,75 @@ with tab_gerador:
                 
                 for filha in tabelas_filhas:
                     rel = df_relacoes[(df_relacoes["MASTERTABLE"] == tabela_pai) & (df_relacoes["CHILDTABLE"] == filha)]
+                    tipo = tipos_join.get(filha, "INNER")  # Pega o tipo escolhido, default INNER
+                    
                     if not rel.empty:
                         conds = []
                         for _, r in rel.iterrows():
                             cp_l, cf_l = str(r["MASTERFIELD"]).split(","), str(r["CHILDFIELD"]).split(",")
                             for cp, cf in zip(cp_l, cf_l):
                                 conds.append(f"{tabela_pai}.{cp.strip()} = {filha}.{cf.strip()}")
-                        script += f"\nINNER JOIN {filha} (NOLOCK) ON\n  " + " AND\n  ".join(conds)
+                        script += f"\n{tipo} JOIN {filha} (NOLOCK) ON\n  " + " AND\n  ".join(conds)
                     else:
-                        script += f"\nINNER JOIN {filha} (NOLOCK) ON\n  -- AJUSTE O JOIN: {tabela_pai}.ID = {filha}.ID"
+                        script += f"\n{tipo} JOIN {filha} (NOLOCK) ON\n  -- AJUSTE O JOIN: {tabela_pai}.ID = {filha}.ID"
 
-                if filtro_where.strip():
-                    script += f"\nWHERE {filtro_where.strip()}"
+                # Adiciona filtros visuais se existirem
+                if st.session_state[f"filtros_{seed}"]:
+                    condicoes_where = []
+                    
+                    for idx, filtro in enumerate(st.session_state[f"filtros_{seed}"]):
+                        campo = filtro["campo"]
+                        operador = filtro["operador"]
+                        valor = filtro["valor"]
+                        
+                        # Monta a condição baseada no operador
+                        if operador in ["IS NULL", "IS NOT NULL"]:
+                            condicao = f"{campo} {operador}"
+                        elif operador == "BETWEEN":
+                            # Para BETWEEN, separa os dois valores
+                            valores = valor.split("|")
+                            if len(valores) == 2:
+                                val1, val2 = valores[0].strip(), valores[1].strip()
+                                # Detecta se é número ou texto para cada valor
+                                if not val1.replace('.', '').replace('-', '').isdigit():
+                                    if not val1.startswith("'"):
+                                        val1 = f"'{val1}'"
+                                if not val2.replace('.', '').replace('-', '').isdigit():
+                                    if not val2.startswith("'"):
+                                        val2 = f"'{val2}'"
+                                condicao = f"{campo} BETWEEN {val1} AND {val2}"
+                            else:
+                                condicao = f"{campo} BETWEEN {valor}"
+                        elif operador in ["IN", "NOT IN"]:
+                            # Para IN/NOT IN, o valor já vem formatado pelo usuário
+                            condicao = f"{campo} {operador} ({valor})"
+                        elif operador in ["LIKE", "NOT LIKE"]:
+                            # Para LIKE, adiciona aspas simples se não tiver
+                            if not valor.startswith("'"):
+                                valor = f"'{valor}'"
+                            condicao = f"{campo} {operador} {valor}"
+                        else:
+                            # Para operadores normais (=, !=, >, <, >=, <=)
+                            # Detecta se é número ou texto
+                            if valor.replace('.', '').replace('-', '').replace(',', '').isdigit():
+                                condicao = f"{campo} {operador} {valor}"
+                            else:
+                                # Se não for número, adiciona aspas simples
+                                if not valor.startswith("'"):
+                                    valor = f"'{valor}'"
+                                condicao = f"{campo} {operador} {valor}"
+                        
+                        # Adiciona o conector (AND/OR) se não for o primeiro filtro
+                        if idx == 0:
+                            condicoes_where.append(condicao)
+                        else:
+                            condicoes_where.append(f"{filtro['conector']} {condicao}")
+                    
+                    # Adiciona a cláusula WHERE à query
+                    if condicoes_where:
+                        where_clause = "\n  ".join(condicoes_where)
+                        script += f"\nWHERE\n  {where_clause}"
+                
                 script += group_by_sql
 
                 # Armazena a SQL gerada no session_state
