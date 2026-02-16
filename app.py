@@ -1,8 +1,39 @@
+
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import json
 import os
+import random
+import re
+
+def gerar_preview_fake(colunas):
+    """Gera um DataFrame fake baseado nas colunas selecionadas"""
+
+    dados = {}
+
+    for col in colunas:
+        nome_coluna = col.split(".")[-1].upper()
+
+        # Regras simples baseadas no nome do campo
+        if any(p in nome_coluna for p in ["COD", "ID", "NUM", "SEQ"]):
+            dados[col] = [random.randint(1, 9999) for _ in range(5)]
+
+        elif any(p in nome_coluna for p in ["DATA", "DT"]):
+            dados[col] = pd.date_range(start="2024-01-01", periods=5)
+
+        elif any(p in nome_coluna for p in ["VALOR", "SAL", "TOTAL", "PRECO"]):
+            dados[col] = [round(random.uniform(1000, 5000), 2) for _ in range(5)]
+
+        elif any(p in nome_coluna for p in ["ATIVO", "STATUS"]):
+            dados[col] = [random.choice(["SIM", "NÃO"]) for _ in range(5)]
+
+        else:
+            dados[col] = [f"{nome_coluna}_{i}" for i in range(1, 6)]
+
+    return pd.DataFrame(dados)
+
 
 # 1. Configuração da Página
 st.set_page_config(page_title="SQL Maker RM - Totvs", layout="wide", page_icon="🚀")
@@ -251,21 +282,151 @@ with tab_tutorial:
     st.header("Seja bem-vindo!")
     st.markdown("""
     Esta ferramenta permite que você extraia informações do RM de forma visual.
+    """)
     
-    ### 📝 O Passo a Passo:
+    # Cards de Features
+    st.markdown("### ✨ Funcionalidades Principais")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 20px; border-radius: 10px; height: 180px;">
+            <h3 style="color: white; margin: 0;">🎯 Seleção Inteligente</h3>
+            <p style="color: #f0f0f0; font-size: 14px; margin-top: 10px;">
+                • Escolha tabelas e campos<br>
+                • JOINs automáticos<br>
+                • Interface visual simples
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                    padding: 20px; border-radius: 10px; height: 180px;">
+            <h3 style="color: white; margin: 0;">🔢 Cálculos e Filtros</h3>
+            <p style="color: #f0f0f0; font-size: 14px; margin-top: 10px;">
+                • SUM, COUNT, AVG, MAX, MIN<br>
+                • Filtros WHERE avançados<br>
+                • GROUP BY automático
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+                    padding: 20px; border-radius: 10px; height: 180px;">
+            <h3 style="color: white; margin: 0;">📊 ORDER BY</h3>
+            <p style="color: #f0f0f0; font-size: 14px; margin-top: 10px;">
+                • Ordenação ASC/DESC<br>
+                • Múltiplos critérios<br>
+                • Interface intuitiva<br>
+                <span style="background-color: #ff4b4b; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold;">NOVO</span>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col4, col5, col6 = st.columns(3)
+    
+    with col4:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); 
+                    padding: 20px; border-radius: 10px; height: 180px;">
+            <h3 style="color: white; margin: 0;">💾 Histórico</h3>
+            <p style="color: #f0f0f0; font-size: 14px; margin-top: 10px;">
+                • Salva automaticamente<br>
+                • Marque favoritas<br>
+                • Exportação em .sql
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col5:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); 
+                    padding: 20px; border-radius: 10px; height: 180px;">
+            <h3 style="color: white; margin: 0;">✏️ Editor SQL</h3>
+            <p style="color: #f0f0f0; font-size: 14px; margin-top: 10px;">
+                • Edite antes de usar<br>
+                • Syntax highlighting<br>
+                • Copiar com 1 clique
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col6:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); 
+                    padding: 20px; border-radius: 10px; height: 180px;">
+            <h3 style="color: #333; margin: 0;">🔗 Joins Flexíveis</h3>
+            <p style="color: #555; font-size: 14px; margin-top: 10px;">
+                • INNER, LEFT, RIGHT, FULL<br>
+                • Relacionamentos automáticos<br>
+                • Múltiplas tabelas
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Passo a Passo
+    st.markdown("### 📝 O Passo a Passo:")
+    st.markdown("""
     1. **Módulo:** Escolha o sistema (Ex: P - RH).
     2. **Tabela:** Escolha o assunto (Ex: Funcionários).
     3. **Colunas:** Marque o que você quer ver no relatório.
     4. **Tabelas Relacionadas [Joins]:** Use se precisar buscar informações de outras tabelas.
     5. **Cálculos:** Use se precisar somar valores ou contar registros.
     6. **Filtros:** Use se precisar filtrar o que é mostrado.
-    7. **Revise:** Uma vez gerado o script, revise-o e baixe-o, retire ou adicione informações. Lembre-se esse App é uma ferramenta de ajuda!
-    """)
+    7. **Ordenação:** <span style="background-color: #ff4b4b; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px; font-weight: bold;">NOVO</span> Organize os resultados na ordem desejada.
+    8. **Revise:** Uma vez gerado o script, revise-o e baixe-o, retire ou adicione informações. Lembre-se esse App é uma ferramenta de ajuda!
+    9. **Faça uma Pré-Visualização:** <span style="background-color: #ff4b4b; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px; font-weight: bold;">NOVO</span> Agora você consegue pré-visualizar como as informações serão mostradas.
+    """, unsafe_allow_html=True)
+    
     st.success("Tudo pronto? Agora clique na aba **'Criar minha Sentença'** lá no topo!")
+    
     st.markdown("---")
+    
+    # Seção Telegram com destaque
     st.markdown("### 🤝 Comunidade e Suporte")
-    st.write("Tem alguma dúvida, encontrou um erro ou quer sugerir uma nova tabela?")
-    st.link_button("🤖 Falar com o Assistente no Telegram", "https://t.me/+HC1B2Grb0UdhNzlh", use_container_width=True)
+    
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 25px; border-radius: 15px; margin: 20px 0;">
+        <h3 style="color: white; margin: 0; text-align: center;">
+            💬 Grupo do Telegram
+        </h3>
+        <p style="color: #f0f0f0; font-size: 16px; margin-top: 15px; text-align: center;">
+            Tem alguma dúvida, encontrou um erro ou quer sugerir uma nova tabela?<br>
+            <strong>Junte-se à nossa comunidade!</strong>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col_telegram1, col_telegram2, col_telegram3 = st.columns([1, 2, 1])
+    with col_telegram2:
+        st.link_button(
+            "📱 Entrar no Grupo do Telegram", 
+            "https://t.me/+HC1B2Grb0UdhNzlh", 
+            use_container_width=True,
+            type="primary"
+        )
+    
+    st.markdown("""
+    <div style="text-align: center; color: #666; margin-top: 15px; font-size: 14px;">
+        💡 No grupo você pode:<br>
+        • Tirar dúvidas sobre a ferramenta<br>
+        • Sugerir novas funcionalidades<br>
+        • Reportar bugs ou problemas<br>
+        • Compartilhar suas queries<br>
+        • Trocar experiências com outros usuários
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- ABA 2: GERADOR ---
 with tab_gerador:
@@ -535,6 +696,76 @@ with tab_gerador:
                 st.rerun()
         
         st.markdown("---")
+        
+        # --- 6. ORDENAÇÃO (ORDER BY) ---
+        st.markdown("### 📊 Ordenação (ORDER BY) <span style='background-color: #ff4b4b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 8px;'>NOVO</span>", unsafe_allow_html=True)
+        
+        # Inicializa a lista de ordenações
+        if f"ordenacoes_{seed}" not in st.session_state:
+            st.session_state[f"ordenacoes_{seed}"] = []
+        
+        # Todos os campos disponíveis para ordenação
+        todos_campos_order = []
+        for campo in campos_pai_sel:
+            todos_campos_order.append(f"{tabela_pai}.{campo}")
+        for filha, campos in campos_por_filha.items():
+            for campo in campos:
+                todos_campos_order.append(f"{filha}.{campo}")
+        
+        if todos_campos_order:
+            col_order1, col_order2, col_order3 = st.columns([3, 2, 1])
+            
+            with col_order1:
+                campo_order = st.selectbox(
+                    "Campo para Ordenar:",
+                    options=todos_campos_order,
+                    key=f"campo_order_{seed}",
+                    help="Escolha o campo que será usado para ordenar os resultados"
+                )
+            
+            with col_order2:
+                direcao_order = st.selectbox(
+                    "Direção:",
+                    options=["ASC", "DESC"],
+                    key=f"direcao_order_{seed}",
+                    help="ASC = Crescente (A-Z, 0-9) | DESC = Decrescente (Z-A, 9-0)"
+                )
+            
+            with col_order3:
+                st.write("")  # Espaçamento
+                st.write("")  # Espaçamento
+                if st.button("➕ Adicionar", key=f"add_order_{seed}", use_container_width=True):
+                    st.session_state[f"ordenacoes_{seed}"].append({
+                        "campo": campo_order,
+                        "direcao": direcao_order
+                    })
+                    st.rerun()
+            
+            # Mostra ordenações adicionadas
+            if st.session_state[f"ordenacoes_{seed}"]:
+                st.markdown("**Ordenações Configuradas:**")
+                for idx, ordem in enumerate(st.session_state[f"ordenacoes_{seed}"]):
+                    col_o1, col_o2 = st.columns([5, 1])
+                    with col_o1:
+                        prioridade = f"{idx + 1}º - " if len(st.session_state[f"ordenacoes_{seed}"]) > 1 else ""
+                        icone = "⬆️" if ordem['direcao'] == "ASC" else "⬇️"
+                        st.text(f"{prioridade}{icone} {ordem['campo']} ({ordem['direcao']})")
+                    with col_o2:
+                        if st.button("🗑️", key=f"remove_order_{idx}_{seed}", help="Remover ordenação"):
+                            st.session_state[f"ordenacoes_{seed}"].pop(idx)
+                            st.rerun()
+                
+                if len(st.session_state[f"ordenacoes_{seed}"]) > 1:
+                    st.caption("💡 A ordenação será aplicada na sequência mostrada acima (1º, 2º, 3º...)")
+                
+                # Botão para limpar todas as ordenações
+                if st.button("🗑️ Limpar Todas as Ordenações", key=f"limpar_ordenacoes_{seed}"):
+                    st.session_state[f"ordenacoes_{seed}"] = []
+                    st.rerun()
+        else:
+            st.info("ℹ️ Selecione campos primeiro para adicionar ordenação.")
+        
+        st.markdown("---")
 
         # --- GERAÇÃO DA SQL ---
         if st.button("✨ GERAR MINHA SENTENÇA SQL", use_container_width=True):
@@ -637,6 +868,13 @@ with tab_gerador:
                         script += f"\nWHERE\n  {where_clause}"
                 
                 script += group_by_sql
+                
+                # Adiciona ORDER BY se existir
+                if st.session_state[f"ordenacoes_{seed}"]:
+                    order_fields = []
+                    for ordem in st.session_state[f"ordenacoes_{seed}"]:
+                        order_fields.append(f"{ordem['campo']} {ordem['direcao']}")
+                    script += "\nORDER BY\n  " + ",\n  ".join(order_fields)
 
                 # Armazena a SQL gerada no session_state
                 st.session_state.sql_gerada = script
@@ -708,12 +946,72 @@ with tab_gerador:
                 file_name=f"sentenca_{st.session_state.get('tabela_atual', 'query')}.sql",
                 use_container_width=True
             )
-            
-            st.markdown("""
-            <div class="info-box">
-                💡 <strong>Dica:</strong> Edite o SQL diretamente no campo acima. Use os botões para copiar ou baixar sua query personalizada.
-            </div>
-            """, unsafe_allow_html=True)
+
+                        # ---------------------------
+            # ---------------------------
+    import re
+
+    # ---------------------------
+    # 🔍 PRÉ-VISUALIZAÇÃO FAKE 2.0
+    # ---------------------------
+    st.markdown("---")
+    st.markdown("### 👀 Pré-visualização dos Dados (Simulação)")
+
+    def extrair_colunas_select(sql):
+        """
+        Extrai somente as colunas do SELECT,
+        respeitando alias e funções agregadas.
+        """
+
+        # Remove comentários
+        sql = re.sub(r"--.*", "", sql)
+
+        # Regex para capturar tudo entre SELECT e FROM
+        match = re.search(r"SELECT(.*?)FROM", sql, re.IGNORECASE | re.DOTALL)
+
+        if not match:
+            return []
+
+        bloco_select = match.group(1)
+
+        # Divide por vírgula respeitando possíveis espaços
+        colunas_raw = [c.strip() for c in bloco_select.split(",") if c.strip()]
+
+        colunas_final = []
+
+        for col in colunas_raw:
+
+            # Se tiver alias
+            alias_match = re.search(r"\s+AS\s+(.+)$", col, re.IGNORECASE)
+            if alias_match:
+                nome_final = alias_match.group(1).strip()
+                colunas_final.append(nome_final)
+                continue
+
+            # Se for função agregada sem alias
+            func_match = re.search(r"(\w+)\((.*?)\)", col)
+            if func_match:
+                func = func_match.group(1).upper()
+                campo = func_match.group(2).split(".")[-1]
+                colunas_final.append(f"{func}_{campo}")
+                continue
+
+            # Campo normal
+            colunas_final.append(col)
+
+        return colunas_final
+
+
+    if st.button("🔎 Visualizar Dados Simulados", use_container_width=True):
+
+        colunas_preview = extrair_colunas_select(st.session_state.sql_editada)
+
+        if colunas_preview:
+            df_fake = gerar_preview_fake(colunas_preview)
+            st.dataframe(df_fake, use_container_width=True)
+            st.caption("⚠️ Dados simulados apenas para visualização. Nenhuma consulta foi executada no banco.")
+        else:
+            st.info("Nenhuma coluna válida encontrada para simulação.")
 
 # --- ABA 3: HISTÓRICO ---
 with tab_historico:
@@ -834,3 +1132,4 @@ with tab_historico:
 # --- RODAPÉ ---
 st.markdown("---")
 st.markdown(f"<div style='text-align: center; color: gray;'>Desenvolvido por Claudio Ximenes | <a href='mailto:csenemix@gmail.com' style='color: #ff4b4b; text-decoration: none;'>Suporte</a></div>", unsafe_allow_html=True)
+
