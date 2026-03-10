@@ -1,11 +1,6 @@
 streamlit
 pandas
 openpyxl
-json
-datetime
-os
-random
-re
 pygwalker
 requests
 zeep
