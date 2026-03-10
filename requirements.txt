@@ -6,3 +6,7 @@ datetime
 os
 random
 re
+pygwalker
+requests
+zeep
+plotly
